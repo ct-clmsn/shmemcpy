@@ -1,0 +1,6 @@
+SPDXVersion: SPDX-2.1
+DataLicense: CC0-1.0
+PackageName: shmemcpy
+PackageOriginator: Christopher Taylor (github.com/ct-clmsn)
+PackageHomePage: https://github.com/ct-clmsn/shmemcpy
+PackageLicenseDeclared: BSL-1.0

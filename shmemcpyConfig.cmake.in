@@ -1,0 +1,49 @@
+# Copyright (c) 2025- Christopher Taylor
+#
+# SPDX-License-Identifier: BSL-1.0
+# Distributed under the Boost Software License, Version 1.0. (See accompanying
+# file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+#
+set(SHMEMCPY_FIND_PACKAGE ON)
+cmake_policy(VERSION 3.18)
+
+include(CMakeFindDependencyMacro)
+
+get_filename_component(
+  _shmemcpy_root_dir "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE
+)
+
+set(SHMEMCPY_VERSION_STRING "@SHMEMCPY_VERSION@")
+set(SHMEMCPY_VERSION_MAJOR @SHMEMCPY_VERSION_MAJOR@)
+set(SHMEMCPY_VERSION_MINOR @SHMEMCPY_VERSION_MINOR@)
+set(SHMEMCPY_VERSION_SUBMINOR @SHMEMCPY_VERSION_SUBMINOR@)
+
+set(SHMEMCPY_PREFIX "${_shmemcpy_root_dir}")
+set(SHMEMCPY_DEBUG_POSTFIX "@SHMEMCPY_DEBUG_POSTFIX@")
+set(SHMEMCPY_BUILD_TYPE "@CMAKE_BUILD_TYPE@")
+
+set(SHMEM_C_COMPILER
+    "@CMAKE_C_COMPILER@"
+    CACHE STRING "C compiler for OpenSHMEM" FORCE
+)
+
+set(SHMEM_C_COMPILER_ID
+    "@CMAKE_C_COMPILER_ID@"
+    CACHE STRING "C compiler id for OpenSHMEM" FORCE
+)
+
+if(NOT DEFINED ${CMAKE_FIND_PACKAGE_NAME}_FOUND)
+  set(${CMAKE_FIND_PACKAGE_NAME}_FOUND true)
+endif()
+
+find_package(PkgConfig REQUIRED QUIET COMPONENTS)
+set(PKG_CONFIG_USE_CMAKE_PREFIX_PATH TRUE)
+
+pkg_search_module(OSHMEM REQUIRED IMPORTED_TARGET GLOBAL oshmem-c) 
+
+# Set legacy variables for linking and include directories
+set(OPENSHMEM_LIBRARIES "m;PkgConfig::OSHMEM;")
+set(OPENSHMEM_INCLUDE_DIRS "")
+set(OPENSHMEM_LIBRARY_DIR "")
+set(OPENSHMEM_LINK_LIBRARIES "")
+set(OPENSHMEM_LINKER_FLAGS "")
