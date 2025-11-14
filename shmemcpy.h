@@ -13,15 +13,15 @@
 struct __shmemcpy_ctx_t {
    int npes;
    int self;
-   int amount;
-   int buf_size;
+   long amount;
+   long buf_size;
    uint8_t * buf;
    unsigned int * notify;
 };
 
 typedef struct __shmemcpy_ctx_t shmemcpy_ctx;
 
-void shmemcpy_ini(shmemcpy_ctx * c, const int int_count);
+void shmemcpy_ini(shmemcpy_ctx * c, const long num_bytes);
 
 void shmemcpy_fin(shmemcpy_ctx * c);
 

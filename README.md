@@ -5,7 +5,7 @@
 # [shmemcpy - symmetric memcpy](https://github.com/ct-clmsn/shmemcpy)
 
 [shmemcpy](https://github.com/ct-clmsn/shmemcpy) implements a point-to-point and broadcast
-symmetric memcpy capability using OpenSHMEM.
+memcpy capability using OpenSHMEM.
 
 ### Installation Requirements
 
@@ -43,6 +43,18 @@ oshrun -n 2 ./shmemcpy_driver
 This library is designed to be run on an HPC system that manages jobs using
 bulk synchronous workload managers: [Slurm](https://slurm.schedmd.com), PBS,
 etc.
+
+### Development Environment
+
+* A DeskPi Super6C with 6 Raspberry Pi CM5 boards (no bluetooth or WiFi just EMMC).
+* Raspberry Pi OS for CM5
+* Slurm
+* NFS
+* UCX
+* OpenMPI-OpenSHMEM
+* pkg-config
+* cmake
+* GCC
 
 ### Licenses
 
