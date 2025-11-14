@@ -53,16 +53,16 @@ static long validate_page_size(long const user_page_size) {
    int const rlimit_data_amt = getrlimit(RLIMIT_DATA, &data_limit);
 
    if(total_available_ram <= user_page_size) {
-            fprintf(stderr, "shmemcpy error, `SHMEMCPY_SEGMENT_SIZE` is greater than or equal to the total available memory (_SC_AVPHYS_PAGES * _SC_PAGESIZE), falling back to `sysconf(_SC_PAGESIZE)`\n");
-            return sysconf(_SC_PAGESIZE);
+      fprintf(stderr, "shmemcpy error, `SHMEMCPY_SEGMENT_SIZE` is greater than or equal to the total available memory (_SC_AVPHYS_PAGES * _SC_PAGESIZE), falling back to `sysconf(_SC_PAGESIZE)`\n");
+      return sysconf(_SC_PAGESIZE);
    }
    else if(data_limit.rlim_cur <= user_page_size) {
-            fprintf(stderr, "shmemcpy error, `SHMEMCPY_SEGMENT_SIZE` is greater than or equal to RLIMIT_DATA's 'soft limit', falling back to `sysconf(_SC_PAGESIZE)`\n");
-            return sysconf(_SC_PAGESIZE);
+      fprintf(stderr, "shmemcpy error, `SHMEMCPY_SEGMENT_SIZE` is greater than or equal to RLIMIT_DATA's 'soft limit', falling back to `sysconf(_SC_PAGESIZE)`\n");
+      return sysconf(_SC_PAGESIZE);
    }
    else if(data_limit.rlim_max <= user_page_size) {
-            fprintf(stderr, "shmemcpy error, `SHMEMCPY_SEGMENT_SIZE` is greater than or equal to RLIMIT_DATA's 'soft limit', falling back to `sysconf(_SC_PAGESIZE)`\n");
-            return sysconf(_SC_PAGESIZE);
+      fprintf(stderr, "shmemcpy error, `SHMEMCPY_SEGMENT_SIZE` is greater than or equal to RLIMIT_DATA's 'soft limit', falling back to `sysconf(_SC_PAGESIZE)`\n");
+      return sysconf(_SC_PAGESIZE);
    }
 
    return user_page_size;
