@@ -20,15 +20,14 @@ communication process.
 `void shmemcpy_ini(shmemcpy_ctx * c, const long num_bytes);`
 
 Users are required to initialize a `shmemcpy_ctx` data type. This function peforms the required
-initialization. The second argument defines the number of bytes that are allocated on the symmetric
-heap (for each processing element, or PE) to use for the purposes of performing shmemcpy operations.
+initialization. The second argument `num_bytes` defines the number of bytes that are allocated on
+the symmetric heap (for each processing element, or PE) to use for the purposes of performing shmemcpy
+operations.
 
-`void shmemcpy_ini(shmemcpy_ctx * c);`
-
-Users are required to initialize a `shmemcpy_ctx` data type. This function peforms the required
-initialization by checking for the environment variable `SHMEMCPY_SEGMENT_SIZE`, or if not provided,
-calling `sysconf(_SC_PAGESIZE)` to determine the amount of each symmetric heap allocation that needs
-to be made for each processing element (PE) to participate in shmemcpy operations. 
+If the `num_bytes` argument is less than 0, `shmemcpy_ini` will check to see if the environment variable
+`SHMEMCPY_SEGMENT_SIZE` is defined. If the environment variable `SHMEMCPY_SEGMENT_SIZE` is invalid (the
+value is too large for the system or the value contains a negative number or non-numeric values),
+`shmemcpy_ini` will default to a page size returned by `sysconf(_SC_PAGESIZE)`.  
 
 `void shmemcpy_fin(shmemcpy_ctx * c);`
 
