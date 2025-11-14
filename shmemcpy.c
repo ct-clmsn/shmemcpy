@@ -61,7 +61,7 @@ static long validate_page_size(long const user_page_size) {
       return sysconf(_SC_PAGESIZE);
    }
    else if(data_limit.rlim_max <= user_page_size) {
-      fprintf(stderr, "shmemcpy error, `SHMEMCPY_SEGMENT_SIZE` is greater than or equal to RLIMIT_DATA's 'soft limit', falling back to `sysconf(_SC_PAGESIZE)`\n");
+      fprintf(stderr, "shmemcpy error, `SHMEMCPY_SEGMENT_SIZE` is greater than or equal to RLIMIT_DATA's 'hard limit', falling back to `sysconf(_SC_PAGESIZE)`\n");
       return sysconf(_SC_PAGESIZE);
    }
 
