@@ -15,35 +15,6 @@
 #include <regex.h>
 #include <sys/resource.h>
 
-static void xmt(unsigned int * notify, uint8_t * buf, uint8_t * a, int nelements, int dst, int src) {
-   //static const int value = 1;
-   volatile unsigned int * notify_src_ptr = &notify[src];
-   shmem_uint8_put( &buf[0], &a[0], nelements, dst );
-   //shmem_quiet();
-   //shmem_uint8_t_put( &notify[dst], &value, 1, dst );
-   shmem_uint_atomic_set( &notify[dst], 1, dst );
-   int rc = shmem_uint_test(notify_src_ptr, SHMEM_CMP_GT, 0);
-   while( !rc ) {
-      rc = shmem_uint_test(notify_src_ptr, SHMEM_CMP_GT, 0);
-   }
-   //notify[src] = 0;
-   shmem_uint_atomic_set( &notify[src], 0, src );
-}
-
-static void rcv(unsigned int * notify, uint8_t * buf, uint8_t * a, int nelements, int dst, int src) {
-   //static const int value = 1;
-   volatile unsigned int * notify_dst_ptr = &notify[dst];
-   int rc = shmem_uint_test(notify_dst_ptr, SHMEM_CMP_GT, 0);
-   while( !rc ) {
-      rc = shmem_uint_test(notify_dst_ptr, SHMEM_CMP_GT, 0);
-   }
-   memcpy( &a[0], buf, nelements*sizeof(uint8_t) );
-   //notify[dst] = 0;
-   shmem_uint_atomic_set( &notify[dst], 0, dst );
-   //shmem_int_put( &notify[src], &value, 1, src );
-   shmem_uint_atomic_set( &notify[src], 1, src );
-}
-
 static long validate_page_size(long const user_page_size) {
    long const pages = sysconf(_SC_AVPHYS_PAGES);
    long const page_size = sysconf(_SC_PAGESIZE);
@@ -97,10 +68,14 @@ void shmemcpy_ini(shmemcpy_ctx* c, const long num_bytes) {
 
    c->npes = shmem_n_pes();
    c->self = shmem_my_pe();
-   c->amount = num_bytes;
+   c->amount = num_bytes; // sizeof(uint8_t) or sizeof(unsigned char)
    c->buf_size = num_bytes * c->npes;
-   c->buf = (uint8_t*)shmem_calloc(1U, (c->buf_size * sizeof(uint8_t))+(c->npes * sizeof(unsigned int)));
+
+   size_t const alloc_num_bytes = (size_t)((c->buf_size)+(c->npes * sizeof(unsigned int)));
+   c->buf = (uint8_t*)shmem_malloc_with_hints( alloc_num_bytes, SHMEM_MALLOC_ATOMICS_REMOTE );
    c->notify = (unsigned int *)(&(c->buf[c->buf_size]));
+
+   memset( &c->buf[0], 0U, (size_t)alloc_num_bytes );
 }
 
 void shmemcpy_fin(shmemcpy_ctx* c) {
@@ -109,6 +84,35 @@ void shmemcpy_fin(shmemcpy_ctx* c) {
    shmem_free(c->buf);
    c->buf = NULL;
    c->notify = NULL;
+}
+
+static void xmt(unsigned int * notify, uint8_t * buf, uint8_t * a, int nelements, int dst, int src) {
+   //static const int value = 1;
+   volatile unsigned int * notify_src_ptr = &notify[src];
+   shmem_uint8_put( &buf[0], &a[0], nelements, dst );
+   //shmem_quiet();
+   //shmem_uint8_t_put( &notify[dst], &value, 1, dst );
+   shmem_uint_atomic_set( &notify[dst], 1, dst );
+   int rc = shmem_uint_test(notify_src_ptr, SHMEM_CMP_GT, 0);
+   while( !rc ) {
+      rc = shmem_uint_test(notify_src_ptr, SHMEM_CMP_GT, 0);
+   }
+   //notify[src] = 0;
+   shmem_uint_atomic_set( &notify[src], 0, src );
+}
+
+static void rcv(unsigned int * notify, uint8_t * buf, uint8_t * a, int nelements, int dst, int src) {
+   //static const int value = 1;
+   volatile unsigned int * notify_dst_ptr = &notify[dst];
+   int rc = shmem_uint_test(notify_dst_ptr, SHMEM_CMP_GT, 0);
+   while( !rc ) {
+      rc = shmem_uint_test(notify_dst_ptr, SHMEM_CMP_GT, 0);
+   }
+   memcpy( &a[0], buf, nelements*sizeof(uint8_t) );
+   //notify[dst] = 0;
+   shmem_uint_atomic_set( &notify[dst], 0, dst );
+   //shmem_int_put( &notify[src], &value, 1, src );
+   shmem_uint_atomic_set( &notify[src], 1, src );
 }
 
 static void shmemcpy_ctx_xmt_lt(shmemcpy_ctx* c, uint8_t * a, const int nelements, const int dst, const int src) {
@@ -176,12 +180,6 @@ void shmemcpy(shmemcpy_ctx* c, uint8_t * a, const int nelements, const int dst, 
 static void xmt_bcast(shmemcpy_ctx* c, int const* indices, uint8_t * buf, uint8_t * a, int nelements, shmem_team_t team, int src) {
    unsigned int * notify_self_ptr = &(c->notify[c->self]);
    unsigned int * notify_src_ptr = &(c->notify[src]);
-
-   //not implemented yet...
-   //int rc = shmem_int_bcast( team, &buf[0], &a[0], nelements, src );
-   //shmem_quiet();
-   //rc = shmem_int_sum_reduce(team, notify_src_ptr, notify_self_ptr, 1);
-   //shmem_quiet();
 
    int const npes = c->npes;
    int const self = c->self;
