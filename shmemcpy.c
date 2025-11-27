@@ -15,10 +15,11 @@
 #include <regex.h>
 #include <sys/resource.h>
 
-static long validate_page_size(long const user_page_size) {
+static long validate_page_size(long const user_page_size, int const pe_count) {
    long const pages = sysconf(_SC_AVPHYS_PAGES);
    long const page_size = sysconf(_SC_PAGESIZE);
    long const total_available_ram = pages * page_size;
+   long segment_size = user_page_size * ((long)pe_count);
 
    struct rlimit data_limit;
    int const rlimit_data_amt = getrlimit(RLIMIT_DATA, &data_limit);
@@ -33,6 +34,19 @@ static long validate_page_size(long const user_page_size) {
    }
    else if(data_limit.rlim_max <= user_page_size) {
       fprintf(stderr, "shmemcpy error, `SHMEMCPY_SEGMENT_SIZE` is greater than or equal to RLIMIT_DATA's 'hard limit', falling back to `sysconf(_SC_PAGESIZE)`\n");
+      return sysconf(_SC_PAGESIZE);
+   }
+
+   if(total_available_ram <= segment_size) {
+      fprintf(stderr, "shmemcpy error, `SHMEMCPY_SEGMENT_SIZE` * PE is greater than or equal to the total available memory (_SC_AVPHYS_PAGES * _SC_PAGESIZE), falling back to `sysconf(_SC_PAGESIZE)`\n");
+      return sysconf(_SC_PAGESIZE);
+   }
+   else if(data_limit.rlim_cur <= segment_size) {
+      fprintf(stderr, "shmemcpy error, `SHMEMCPY_SEGMENT_SIZE` * PE is greater than or equal to RLIMIT_DATA's 'soft limit', falling back to `sysconf(_SC_PAGESIZE)`\n");
+      return sysconf(_SC_PAGESIZE);
+   }
+   else if(data_limit.rlim_max <= segment_size) {
+      fprintf(stderr, "shmemcpy error, `SHMEMCPY_SEGMENT_SIZE` * PE is greater than or equal to RLIMIT_DATA's 'hard limit', falling back to `sysconf(_SC_PAGESIZE)`\n");
       return sysconf(_SC_PAGESIZE);
    }
 
@@ -61,7 +75,7 @@ void shmemcpy_ini(shmemcpy_ctx* c, const long num_bytes) {
          }
          else {
             page_size = atol(pagesize_cstr);
-            page_size = validate_page_size(page_size);
+            page_size = validate_page_size(page_size, c->npes);
          }
       }
    }
