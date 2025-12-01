@@ -38,22 +38,24 @@ static long validate_page_size(long const user_page_size, int const pe_count) {
    }
 
    if(total_available_ram <= segment_size) {
-      fprintf(stderr, "shmemcpy error, `SHMEMCPY_SEGMENT_SIZE` * PE is greater than or equal to the total available memory (_SC_AVPHYS_PAGES * _SC_PAGESIZE), falling back to `sysconf(_SC_PAGESIZE)`\n");
+      fprintf(stderr, "shmemcpy error, ( `SHMEMCPY_SEGMENT_SIZE` * PE ) is greater than or equal to the total available memory (_SC_AVPHYS_PAGES * _SC_PAGESIZE), falling back to `sysconf(_SC_PAGESIZE)`\n");
       return sysconf(_SC_PAGESIZE);
    }
    else if(data_limit.rlim_cur <= segment_size) {
-      fprintf(stderr, "shmemcpy error, `SHMEMCPY_SEGMENT_SIZE` * PE is greater than or equal to RLIMIT_DATA's 'soft limit', falling back to `sysconf(_SC_PAGESIZE)`\n");
+      fprintf(stderr, "shmemcpy error, ( `SHMEMCPY_SEGMENT_SIZE` * PE ) is greater than or equal to RLIMIT_DATA's 'soft limit', falling back to `sysconf(_SC_PAGESIZE)`\n");
       return sysconf(_SC_PAGESIZE);
    }
    else if(data_limit.rlim_max <= segment_size) {
-      fprintf(stderr, "shmemcpy error, `SHMEMCPY_SEGMENT_SIZE` * PE is greater than or equal to RLIMIT_DATA's 'hard limit', falling back to `sysconf(_SC_PAGESIZE)`\n");
+      fprintf(stderr, "shmemcpy error, ( `SHMEMCPY_SEGMENT_SIZE` * PE ) is greater than or equal to RLIMIT_DATA's 'hard limit', falling back to `sysconf(_SC_PAGESIZE)`\n");
       return sysconf(_SC_PAGESIZE);
    }
 
    return user_page_size;
 }
 
-void shmemcpy_ini(shmemcpy_ctx* c, const long num_bytes) {
+void shmemcpy_ini(shmemcpy_ctx* c, const long n_bytes) {
+
+   long num_bytes = n_bytes;
 
    if(num_bytes < 1) {
       char * pagesize_cstr = getenv("SHMEMCPY_SEGMENT_SIZE");
@@ -78,11 +80,16 @@ void shmemcpy_ini(shmemcpy_ctx* c, const long num_bytes) {
             page_size = validate_page_size(page_size, c->npes);
          }
       }
+
+      num_bytes = page_size;
+   }
+   else {
+      num_bytes = validate_page_size(n_bytes, c->npes);
    }
 
    c->npes = shmem_n_pes();
    c->self = shmem_my_pe();
-   c->amount = num_bytes; // sizeof(uint8_t) or sizeof(unsigned char)
+   c->amount = num_bytes; // usually : ( sizeof(uint8_t) or sizeof(unsigned char) ) * num_elements | sometimes a page_size
    c->buf_size = num_bytes * c->npes;
 
    size_t const alloc_num_bytes = (size_t)((c->buf_size)+(c->npes * sizeof(unsigned int)));
@@ -242,9 +249,34 @@ void shmemcpy_bcast(shmemcpy_ctx * c, uint8_t * a, const int nelements, shmem_te
    int indices[npes];
    int const src_end = src + npes;
    for(int i = src; i < src_end; ++i) {
-      indices[i] = i % npes;
+      indices[i % npes] = i - src;
    }
 
    int const cond = c->amount < nelements;
+   rcv_op[cond](c, indices, a, nelements, team, 0);
+}
+
+void shmemcpy_scatter(shmemcpy_ctx * c, uint8_t * a, const int nbytes_per_segment, shmem_team_t team, const int src) {
+   static const void ( *rcv_op [2] )(shmemcpy_ctx*, int const*, uint8_t *, const int, shmem_team_t, const int) = { shmemcpy_ctx_scatter_, shmemcpy_ctx_scatter_lt };
+
+   int const total_bytes = c->npes * nbytes_per_segment;
+   int const npes = c->npes;
+
+   int indices[npes];
+   int comm_amounts[npes];
+
+   int const src_end = src + npes;
+   int pos = 0;
+
+   for(int i = src; i < src_end; ++i) {
+      pos = i % npes;
+      indices[pos] = i - src;
+      comm_amounts[pos] = total_bytes >> (((i - src) >> 1) + 1);
+   }
+
+   int const communication_amt = comm_amounts[indices[c->self]];
+   uint8_t * tmp_buffer = (uint8_t*)calloc(1U, communication_amt);
+
+   int const cond = c->amount < communication_amt;
    rcv_op[cond](c, indices, a, nelements, team, 0);
 }

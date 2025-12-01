@@ -29,4 +29,6 @@ void shmemcpy(shmemcpy_ctx * c, uint8_t * a, const int nelements, const int dst,
 
 void shmemcpy_bcast(shmemcpy_ctx * c, uint8_t * a, const int nelements, shmem_team_t team, const int src);
 
+void shmemcpy_scatter(shmemcpy_ctx * c, uint8_t * a, const int nelements_per_segment, shmem_team_t team, const int src);
+
 #endif
